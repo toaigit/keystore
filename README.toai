@@ -1,0 +1,42 @@
+HOW to create a keystore file?
+   keytool -keystore newkeystore.jks -genkey -alias mysite
+      You will  be ask to for CN, OU, O, C ,etc and two passwords (keystore, privatekey)
+   You can then get the csr from this keystore file
+      keytool -keystore newkeystore.jks -certreq -alias mykey -keyalg rsa -file mysite.csr
+   You now can request the vendor for a certificate using this csr file.
+      keytool -import -keystore newkeystore.jks -file mysite.pem -alias mysite
+      keytool -import -keystore newkeystore.jks -file CAroot.pem -alias mysiteRootCA
+      NOTE: you see PrivateKeyEntry (means cert), or trustedCertEntry lines 
+
+HOW to import existing apache cert and key to a keystore?
+
+First you import the cert, chains, and  key into an intemmediate pk12 key.
+   cat cert.pem chain.pem > certs.pem
+   You now should have key.pem, certs.pem, existing-keystore.jkd files
+
+1. Use the openssl to import/create a pk12 file contained the certs.pem and key.pem.
+openssl pkcs12 -export -in certs.pem -inkey key.pem -name aliasName > temp-output.p12
+2.  Importing to the existing jks file using keytool command
+keytool -importkeystore -srckeystore temp-output.p12 -destkeystore existing-keystore.jks -srcstoretype pkcs12 -alias aliasName
+
+HOW to add rootCA/TrustCA cert to the keystore
+keytool -import -trustcacerts -alias DigiCert -file Yahoo-DigiCert-RootCA.pem -keystore existing-keystore.jks
+
+HOW to extract the cert from the keystore
+  keytool -export -alias certAlias -keystore existing-keystore.jks -rfc -file certout.pem
+
+HOW to extract the key from the keystore
+This is a two step process - conver JKS to PSCK12 format, then extract the key
+ keytool -importkeystore -srckeystore your.jks -srcstorepass changeit \
+         -srckeypass changeit -srcalias yourSiteName \
+         -destalias yourSiteName -destkeystore output.p12 \
+         -deststoretype PKCS12 -deststorepass changeit -destkeypass changeit
+
+ openssl pkcs12 -in output.p12 -nodes -nocerts -out yourSiteName.key
+
+HOW to list cert in the keystore
+   keytool -list -keystore yourkeystorefile
+
+HOW to delete the cert and key from the keystore
+  keytool -delete -alias yourSiteName -keystore keystore-file
+
